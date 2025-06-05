@@ -1,12 +1,12 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { answerWithContext, streamAnswerWithContext } from "../agents/ragAgent";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { extractTextFromPDF, splitIntoChunks } from "../utils/pdfUtils";
 import { embedAndStore } from "../embedding/embedToSupabase";
+import { ragWorkflow } from "../agents/graph"; // ✅ import this
 
 dotenv.config();
 
@@ -18,9 +18,8 @@ app.use(express.json());
 
 const upload = multer({ dest: "uploads/" });
 
-// ✅ This must be outside the POST route
-app.get("/", (req, res) => {
-  res.send("✅ Deal Agent API is running. Use POST /ask to interact.");
+app.get("/", (req: Request, res: Response) => {
+  res.send("✅ Deal Agent API is running. Use POST /stream to interact.");
 });
 
 app.post("/upload", upload.single("file"), async (req: Request, res: Response): Promise<void> => {
@@ -35,9 +34,7 @@ app.post("/upload", upload.single("file"), async (req: Request, res: Response): 
     const text = await extractTextFromPDF(filePath);
     const chunks = splitIntoChunks(text);
     await embedAndStore(chunks);
-
-    fs.unlinkSync(filePath); // clean up
-
+    fs.unlinkSync(filePath);
     res.status(200).json({ message: "✅ PDF processed and stored successfully", chunks: chunks.length });
   } catch (error) {
     console.error("❌ Upload error:", error);
@@ -45,29 +42,7 @@ app.post("/upload", upload.single("file"), async (req: Request, res: Response): 
   }
 });
 
-app.post("/ask", async (req: Request, res: Response): Promise<void> => {
-  const { question } = req.body;
-
-  if (!question || typeof question !== "string") {
-    res.status(400).json({ error: "Missing or invalid 'question'" });
-    return;
-  }
-
-  try {
-    const answer = await answerWithContext(question);
-    res.json({ answer });
-  } catch (err) {
-  console.error("❌ API error:", err);
-  if (err instanceof Error) {
-    res.status(500).json({ error: err.message });
-  } else {
-    res.status(500).json({ error: "Unknown server error" });
-  }
-}
-
-});
-
-app.post("/stream", (req: Request, res: Response) => {
+app.post("/stream", async (req: Request, res: Response) => {
   const { question, chatHistory } = req.body;
 
   if (!question || typeof question !== "string") {
@@ -84,20 +59,22 @@ app.post("/stream", (req: Request, res: Response) => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
 
-  (async () => {
-    try {
-      await streamAnswerWithContext(question, chatHistory, (token: string) => {
+  try {
+    await ragWorkflow({
+      question,
+      messages: chatHistory,
+      onToken: (token: string) => {
         res.write(`data: ${token}\n\n`);
-      });
+      },
+    });
 
-      res.write("data: [DONE]\n\n");
-      res.end();
-    } catch (err) {
-      console.error("❌ Streaming error:", err);
-      res.write("data: [ERROR]\n\n");
-      res.end();
-    }
-  })();
+    res.write("data: [DONE]\n\n");
+    res.end();
+  } catch (err) {
+    console.error("❌ Streaming error:", err);
+    res.write("data: [ERROR]\n\n");
+    res.end();
+  }
 });
 
 app.listen(port, () => {

@@ -44,60 +44,68 @@ export default function App() {
   };
 
   const handleAsk = async () => {
-    if (!question.trim()) return;
+  if (!question.trim()) return;
 
-    const currentHistory = [
-      ...messages,
-      { role: "user" as const, content: question }
-    ];
-    setMessages(currentHistory);
-    const currentQuestion = question;
-    setQuestion("");
-    setLoading(true);
+  const currentHistory = [
+    ...messages,
+    { role: "user" as const, content: question }
+  ];
+  setMessages(currentHistory);
+  const currentQuestion = question;
+  setQuestion("");
+  setLoading(true);
 
-    try {
-      let aiMessage = "";
-      const res = await fetch("http://localhost:3001/stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: currentQuestion, chatHistory: currentHistory }),
-      });
+  try {
+    let aiMessage = "";
+    let didWebScrape = false;  // ← track whether we’ve fallen back once
+    const res = await fetch("http://localhost:3001/stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: currentQuestion, chatHistory: currentHistory }),
+    });
 
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder("utf-8");
+    const reader = res.body?.getReader();
+    const decoder = new TextDecoder("utf-8");
 
-      // Add empty AI message that we'll update
-      setMessages(prev => [...prev, { role: "ai", content: "" }]);
+    // Add an empty AI message that we’ll update
+    setMessages(prev => [...prev, { role: "ai", content: "" }]);
 
-      while (true) {
-        const { value, done } = await reader!.read();
-        if (done) break;
+    while (true) {
+      const { value, done } = await reader!.read();
+      if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n").filter((line) => line.trim().startsWith("data:"));
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk
+        .split("\n")
+        .filter(line => line.trim().startsWith("data:"));
 
-        for (const line of lines) {
-          const token = line.replace(/^data:\s*/, "");
-          if (token === "[DONE]") {
-            setLoading(false);
-            return;
-          }
-          aiMessage += token;
-          
-          // Update the last message with streaming content
-          setMessages(prev => {
-            const newMessages = [...prev];
-            newMessages[newMessages.length - 1] = { role: "ai", content: aiMessage };
-            return newMessages;
-          });
-        }
+      for (const line of lines) {
+        const token = line.replace(/^data:\s*/, "");
+        if (token === "[DONE]") {
+        // Ignore the [DONE] marker and wait for stream end
+        continue;
+      } 
+        aiMessage += token;
+
+        // Update the last AI message with streaming content
+        setMessages(prev => {
+          const newMessages = [...prev];
+          newMessages[newMessages.length - 1] = { role: "ai", content: aiMessage };
+          return newMessages;
+        });
       }
-    } catch (error) {
-      setMessages(prev => [...prev, { role: "ai", content: "❌ Sorry, I encountered an error. Please try again." }]);
-    } finally {
-      setLoading(false);
+
+      // If we broke out on the second DONE:
     }
-  };
+  } catch (error) {
+    setMessages(prev => [
+      ...prev,
+      { role: "ai", content: "❌ Sorry, I encountered an error. Please try again." },
+    ]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {

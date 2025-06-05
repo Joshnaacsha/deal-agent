@@ -4,7 +4,7 @@ import { getEmbedding } from "../embedding/localEmbed";
 /**
  * Query Supabase for the top similar documents to a user query
  */
-export async function searchSimilar(query: string, topK = 3) {
+export async function searchSimilar(query: string, topK = 5) {
   const embedding = await getEmbedding(query); // convert query to vector
 
   const { data, error } = await supabase.rpc("match_documents", {

@@ -1,12 +1,19 @@
-import axios from "axios";
+import { GoogleGenerativeAI, TaskType } from "@google/generative-ai";
+import dotenv from "dotenv";
+dotenv.config();
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function getEmbedding(text: string): Promise<number[]> {
-  const res = await axios.post("http://localhost:11434/api/embeddings", {
-    model: "nomic-embed-text",
-    prompt: text
+  const model = genAI.getGenerativeModel({ model: "models/embedding-001" });
+
+  const result = await model.embedContent({
+    content: {
+      role: "user",
+      parts: [{ text }],
+    },
+    taskType: TaskType.RETRIEVAL_DOCUMENT,
   });
 
-
-    return res.data.embedding;
-
+  return result.embedding.values;
 }
