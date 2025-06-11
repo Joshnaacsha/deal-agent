@@ -4,9 +4,13 @@ import dotenv from "dotenv";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+
+import { graphStateDef } from "../agents/graphState";
+import type { StateType } from "@langchain/langgraph";
+
 import { extractTextFromPDF, splitIntoChunks } from "../utils/pdfUtils";
 import { embedAndStore } from "../embedding/embedToSupabase";
-import { ragWorkflow } from "../agents/graph"; // ✅ import this
+import { compiledGraph } from "../agents/graph"; // 👈 LangGraph instance
 
 dotenv.config();
 
@@ -18,8 +22,10 @@ app.use(express.json());
 
 const upload = multer({ dest: "uploads/" });
 
+type DealAgentState = StateType<typeof graphStateDef>;
+
 app.get("/", (req: Request, res: Response) => {
-  res.send("✅ Deal Agent API is running. Use POST /stream to interact.");
+  res.send("✅ Deal Agent API is running. Use POST /upload and /stream to interact.");
 });
 
 app.post("/upload", upload.single("file"), async (req: Request, res: Response): Promise<void> => {
@@ -34,8 +40,19 @@ app.post("/upload", upload.single("file"), async (req: Request, res: Response): 
     const text = await extractTextFromPDF(filePath);
     const chunks = splitIntoChunks(text);
     await embedAndStore(chunks);
-    fs.unlinkSync(filePath);
-    res.status(200).json({ message: "✅ PDF processed and stored successfully", chunks: chunks.length });
+
+    fs.unlinkSync(filePath); // cleanup
+
+    const result: DealAgentState = await compiledGraph.invoke({ rawText: text });
+
+    res.status(200).json({
+      message: "✅ PDF processed and analyzed",
+      chunks: chunks.length,
+      summary: result.summary,
+      strategicScore: result.strategicScore,
+      explanation: result.explanation,
+      scores: result.scores ?? null,
+    });
   } catch (error) {
     console.error("❌ Upload error:", error);
     res.status(500).json({ error: "Failed to process PDF" });
@@ -43,7 +60,7 @@ app.post("/upload", upload.single("file"), async (req: Request, res: Response): 
 });
 
 app.post("/stream", async (req: Request, res: Response) => {
-  const { question, chatHistory } = req.body;
+  const { question, chatHistory, rawText } = req.body;
 
   if (!question || typeof question !== "string") {
     res.status(400).json({ error: "Invalid question" });
@@ -59,16 +76,28 @@ app.post("/stream", async (req: Request, res: Response) => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
 
-  try {
-    await ragWorkflow({
-      question,
-      messages: chatHistory,
-      onToken: (token: string) => {
-        res.write(`data: ${token}\n\n`);
-      },
-    });
+  let fullResponse = "";
 
-    res.write("data: [DONE]\n\n");
+  try {
+    await compiledGraph.invoke(
+      {
+        question,
+        messages: chatHistory,
+        rawText,
+      },
+      {
+        callbacks: [
+          {
+            handleLLMNewToken: async (token: string) => {
+              fullResponse += token;
+              res.write(`data: ${token}\n\n`);
+            },
+          },
+        ],
+      }
+    );
+
+    res.write(`data: [DONE]\n\n`);
     res.end();
   } catch (err) {
     console.error("❌ Streaming error:", err);

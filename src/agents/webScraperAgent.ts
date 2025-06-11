@@ -1,15 +1,16 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
-import { GraphState } from "./graphState";
+import { graphStateDef } from "./graphState";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { DocumentInterface } from "@langchain/core/documents";
-
+import { StateType } from "@langchain/langgraph";
 
 export async function scrapeWeb(
-  state: typeof GraphState.State,
+  state: StateType<typeof graphStateDef>,
   config?: RunnableConfig
-): Promise<Partial<typeof GraphState.State>> {
-  console.log("---RETRIEVE---");{
+): Promise<Partial<StateType<typeof graphStateDef>>> {
+  console.log("---RETRIEVE---");
+
   const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(state.question)}`;
 
   try {
@@ -20,24 +21,22 @@ export async function scrapeWeb(
     const $ = cheerio.load(data);
     const snippets: DocumentInterface[] = [];
 
-$(".result__snippet").each((_, el) => {
-  const text = $(el).text();
-  if (text) {
-    snippets.push({
-      pageContent: text,
-      metadata: {
-        source: "duckduckgo",
-        timestamp: new Date().toISOString(),
-      },
+    $(".result__snippet").each((_, el) => {
+      const text = $(el).text();
+      if (text) {
+        snippets.push({
+          pageContent: text,
+          metadata: {
+            source: "duckduckgo",
+            timestamp: new Date().toISOString(),
+          },
+        });
+      }
     });
-  }
-});
 
-return { webScrapedDocuments: snippets };
-
+    return { webScrapedDocuments: snippets };
   } catch (err) {
     console.error("❌ Web scraping failed:", err);
     return { webScrapedDocuments: [] };
-  }
   }
 }

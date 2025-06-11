@@ -31,10 +31,19 @@ export default function App() {
       });
       
       setUploadedFile(file.name);
-      setMessages([{
-        role: "ai",
-        content: `📄 Document "${file.name}" has been uploaded successfully! You can now ask questions about it.`
-      }]);
+      const result = await res.json();
+
+setMessages([
+  {
+    role: "ai",
+    content: `📄 Document "${file.name}" has been uploaded successfully! Here's a quick summary:`
+  },
+  {
+    role: "ai",
+    content: result.summary || "No summary found."
+  }
+]);
+
     } catch (error) {
       setMessages([{
         role: "ai",

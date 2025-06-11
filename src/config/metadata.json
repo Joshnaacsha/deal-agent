@@ -1,0 +1,7 @@
+{
+  "coreIndustries": ["Healthcare", "Finance"],
+  "regions": ["US", "EU"],
+  "domains": ["AI", "Cybersecurity"],
+  "pastWins": ["RFP-001", "RFP-002"],
+  "resources": ["Cloud team", "AI engineers"]
+}
