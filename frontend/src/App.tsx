@@ -67,7 +67,7 @@ setMessages([
   try {
     let aiMessage = "";
     let didWebScrape = false;  // ← track whether we’ve fallen back once
-    const res = await fetch("http://localhost:3001/stream", {
+const res = await fetch("http://localhost:3001/rag-stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question: currentQuestion, chatHistory: currentHistory }),

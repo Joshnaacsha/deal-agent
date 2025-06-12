@@ -4,35 +4,55 @@ import { evaluateStrategy } from "../agents/strategyAgent.js";
 import { generateSummary } from "../agents/summaryAgent.js";
 import { streamAnswerWithContext } from "../agents/ragAgent.js";
 import { scrapeWeb } from "../agents/webScraperAgent.js";
+import { isAnswerInDocument } from "../utils/isAnswerInDocument.js";
 
-// Reusable RAG call
-const streamNode = async (state: any, options: any = {}) => {
+// ✅ Initial RAG node
+const streamInitialAnswer = async (state: any, options: any = {}) => {
   const onToken = options?.onToken ?? (() => {});
-  return streamAnswerWithContext(state, onToken);
+  const updatedState = await streamAnswerWithContext(state, onToken); // ✅ Capture updated state
+  return updatedState;
 };
 
-// ✅ Router node for branching
-const decideNextStep = (state: any) => {
-  // If answer is found, end. Otherwise, go to scrapeWeb node.
-  return { next: state.answerFound ? END : "scrapeWeb" };
+// ✅ Web fallback streaming node
+const streamWithWeb = async (state: any, options: any = {}) => {
+  const onToken = options?.onToken ?? (() => {});
+  const updatedState = await streamAnswerWithContext(state, onToken); // ✅ Capture updated state
+  return updatedState;
 };
+
+// ✅ Decision node
+const decideNextStep = (state: any) => {
+  if (state.answerFound || state.isAnswerInDocument) return { next: END };
+  if (!state.hasScraped) return { next: "scrapeWeb" };
+  return { next: END }; // break if already scraped once
+};
+
 
 const graph = new StateGraph(graphStateDef)
   .addNode("evaluateStrategy", evaluateStrategy)
   .addNode("generateSummary", generateSummary)
-  .addNode("streamAnswerWithContext", streamNode)
+  .addNode("streamAnswerWithContext", streamInitialAnswer)
   .addNode("decideNextStep", decideNextStep)
   .addNode("scrapeWeb", scrapeWeb)
-  .addNode("streamWithWeb", streamNode)
 
-  // Connect the graph flow with .addEdge
+  // Start → Strategy → Summary → Initial Answer
   .addEdge(START, "evaluateStrategy")
   .addEdge("evaluateStrategy", "generateSummary")
   .addEdge("generateSummary", "streamAnswerWithContext")
+
+  // streamAnswer → decide → scrapeWeb or END
   .addEdge("streamAnswerWithContext", "decideNextStep")
-  .addEdge("decideNextStep", "scrapeWeb") // Ensuring connection from decision to scrapeWeb
-  .addEdge("scrapeWeb", "streamWithWeb") // Connect scrapeWeb to streamWithWeb
-  .addEdge("streamWithWeb", END);
+
+  // Conditional branching
+  .addConditionalEdges("decideNextStep", (state: any) => {
+  if (state.isAnswerInDocument) return END;
+  if (!state.hasScraped && !state.isAnswerInDocument) return "scrapeWeb";
+  return END; // ✅ fallback if scraped but still no answer
+})
+.addEdge("scrapeWeb", "streamAnswerWithContext")
+
+  // Final termination
+  .addEdge("streamAnswerWithContext", END);
 
 const compiledGraph = graph.compile();
 export { compiledGraph };

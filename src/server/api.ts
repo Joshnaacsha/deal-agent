@@ -10,7 +10,8 @@ import type { StateType } from "@langchain/langgraph";
 
 import { extractTextFromPDF, splitIntoChunks } from "../utils/pdfUtils";
 import { embedAndStore } from "../embedding/embedToSupabase";
-import { compiledGraph } from "../agents/graph"; // 👈 LangGraph instance
+import { compiledGraph } from "../agents/graph"; // LangGraph agent
+import { streamAnswerWithContext } from "../agents/ragAgent"; // RAG-only fallback path
 
 dotenv.config();
 
@@ -24,24 +25,26 @@ const upload = multer({ dest: "uploads/" });
 
 type DealAgentState = StateType<typeof graphStateDef>;
 
+// ✅ Health Check
 app.get("/", (req: Request, res: Response) => {
-  res.send("✅ Deal Agent API is running. Use POST /upload and /stream to interact.");
+  res.send("✅ Deal Agent API is running. Use /upload and /rag-stream.");
 });
 
-app.post("/upload", upload.single("file"), async (req: Request, res: Response): Promise<void> => {
+// ✅ PDF Upload & Summary + Strategy Analysis
+app.post("/upload", upload.single("file"), async (req: Request, res: Response) => {
   if (!req.file) {
     res.status(400).json({ error: "No file uploaded." });
     return;
   }
 
-  const filePath = path.join(__dirname, "../../uploads", req.file.filename);
+  const filePath = path.resolve("uploads", req.file.filename);
 
   try {
     const text = await extractTextFromPDF(filePath);
     const chunks = splitIntoChunks(text);
     await embedAndStore(chunks);
 
-    fs.unlinkSync(filePath); // cleanup
+    fs.unlinkSync(filePath); // delete local file
 
     const result: DealAgentState = await compiledGraph.invoke({ rawText: text });
 
@@ -59,8 +62,9 @@ app.post("/upload", upload.single("file"), async (req: Request, res: Response): 
   }
 });
 
-app.post("/stream", async (req: Request, res: Response) => {
-  const { question, chatHistory, rawText } = req.body;
+// ✅ RAG Stream Endpoint (fallbacks to webScraper if needed)
+app.post("/rag-stream", async (req: Request, res: Response) => {
+  const { question, chatHistory } = req.body;
 
   if (!question || typeof question !== "string") {
     res.status(400).json({ error: "Invalid question" });
@@ -79,33 +83,30 @@ app.post("/stream", async (req: Request, res: Response) => {
   let fullResponse = "";
 
   try {
-    await compiledGraph.invoke(
+    await streamAnswerWithContext(
       {
         question,
         messages: chatHistory,
-        rawText,
+        webScrapedDocuments: [],
       },
-      {
-        callbacks: [
-          {
-            handleLLMNewToken: async (token: string) => {
-              fullResponse += token;
-              res.write(`data: ${token}\n\n`);
-            },
-          },
-        ],
+      (token: string) => {
+        if (token === "[DONE]") {
+          res.write(`data: [DONE]\n\n`);
+        } else {
+          fullResponse += token;
+          res.write(`data: ${token}\n\n`);
+        }
       }
     );
-
-    res.write(`data: [DONE]\n\n`);
     res.end();
   } catch (err) {
-    console.error("❌ Streaming error:", err);
+    console.error("❌ RAG stream error:", err);
     res.write("data: [ERROR]\n\n");
     res.end();
   }
 });
 
+// ✅ Start server
 app.listen(port, () => {
   console.log(`🚀 Deal Agent API running at http://localhost:${port}`);
 });

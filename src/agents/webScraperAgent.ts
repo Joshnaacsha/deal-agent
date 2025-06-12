@@ -9,7 +9,7 @@ export async function scrapeWeb(
   state: StateType<typeof graphStateDef>,
   config?: RunnableConfig
 ): Promise<Partial<StateType<typeof graphStateDef>>> {
-  console.log("---RETRIEVE---");
+  console.log("🌐 ---SCRAPE WEB---");
 
   const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(state.question)}`;
 
@@ -34,9 +34,17 @@ export async function scrapeWeb(
       }
     });
 
-    return { webScrapedDocuments: snippets };
+    console.log(`✅ Retrieved ${snippets.length} snippets from web.`);
+
+    return {
+      webScrapedDocuments: snippets,
+      hasScraped: true,
+    };
   } catch (err) {
     console.error("❌ Web scraping failed:", err);
-    return { webScrapedDocuments: [] };
+    return {
+      webScrapedDocuments: [],
+      hasScraped: true,
+    };
   }
 }

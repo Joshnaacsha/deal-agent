@@ -77,4 +77,9 @@ export const graphStateDef = {
     reducer: (x, y) => y ?? x ?? false,
     default: () => false,
   }),
+  // ✅ ADD THIS:
+  hasScraped: Annotation<boolean>({
+    reducer: (x, y) => y ?? x ?? false,
+    default: () => false,
+  }),
 };

@@ -19,21 +19,21 @@ export async function streamAnswerWithContext(
   const question: string = state.question;
   const chatHistory: Message[] = state.messages ?? [];
 
-  // Step 1: Retrieve relevant document context (passed in via state)
+  // ✅ Step 1: Retrieve document context
   const docResults = state.docResults ?? (await searchSimilar(question, 4));
   const docContext = docResults.map((r: { content: string }) => r.content).join("\n---\n");
 
-  // Step 2: Retrieve web context if available
+  // ✅ Step 2: Use web context only if already present in state
   const webContext = (state.webScrapedDocuments || [])
     .map((doc: { pageContent: string }) => doc.pageContent)
     .join("\n---\n");
 
-  // Step 3: Format chat history
+  // ✅ Step 3: Format chat history
   const historyText = chatHistory
     .map(m => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
     .join("\n");
 
-  // Step 4: Final prompt
+  // ✅ Step 4: Compose prompt
   const prompt = `
 You are a helpful AI assistant.
 
@@ -57,12 +57,12 @@ ${question}
 
 Answer the question using the available context:
 
-- Prefer 📄 DOCUMENT CONTEXT first.
-- If not available in documents, use 🌐 WEB CONTEXT and explicitly say: "This information is from a recent web search."
+- Prefer DOCUMENT CONTEXT first.
+- If not available in documents, use WEB CONTEXT and explicitly say: "This information is from a recent web search."
 - If not found in either, respond **exactly** with: "Not found in available document or web context."
 `;
 
-  // Step 5: Generate and stream the answer
+  // ✅ Step 5: Stream the response
   const streamResp = await model.generateContentStream({
     contents: [{ role: "user", parts: [{ text: prompt }] }],
   });
@@ -77,7 +77,6 @@ Answer the question using the available context:
     buffer += token;
     fullOutput += token;
 
-    // Emit if a sentence ends or newline appears
     const emitRegex = /[.!?]\s|\n{1,2}/g;
     let emitPoint = -1;
     let match: RegExpExecArray | null;
@@ -93,7 +92,6 @@ Answer the question using the available context:
     }
   }
 
-  // ✅ Final buffer flush before DONE
   if (buffer.trim()) {
     console.log("🧾 Final buffer to flush:", buffer.trim());
     onToken(buffer.trim());
@@ -102,14 +100,25 @@ Answer the question using the available context:
 
   onToken("[DONE]");
 
-  // Step 6: Attach full response to state
+  // ✅ Step 6: Determine if the answer is useful or just a placeholder
+  const lowerOutput = fullOutput.toLowerCase();
+  const isGeneric =
+    lowerOutput.includes("what is your question") ||
+    lowerOutput.includes("i'm ready") ||
+    lowerOutput.includes("ok. i'm ready") ||
+    lowerOutput.includes("okay, i understand") ||
+    lowerOutput.includes("i understand");
+
+  const foundAnswer =
+    !lowerOutput.includes("not found in available document or web context.") &&
+    !isGeneric;
+
   state.generation = fullOutput;
-  state.answerFound = !fullOutput
-    .toLowerCase()
-    .includes("not found in available document or web context.");
+  state.answerFound = foundAnswer;
 
   console.log("🧾 Full Answer:", fullOutput);
-  console.log("✅ isAnswerInDocument:", state.answerFound);
+  console.log("⚠️ Generic Answer:", isGeneric);
+  console.log("✅ isAnswerInDocument:", foundAnswer);
 
   return state;
 }
