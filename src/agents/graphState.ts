@@ -119,4 +119,44 @@ export const graphStateDef = {
     reducer: (x, y) => y ?? x ?? "proceed",
     default: () => "proceed",
   }),
+
+  readinessScore: Annotation<number>({
+  reducer: (x, y) => y ?? x ?? 0,
+  default: () => 0,
+}),
+readinessExplanation: Annotation<{
+  stakeholderClarity: string;
+  decisionMakerAccess: string;
+  projectBackground: string;
+}>({
+  reducer: (x, y) => y ?? x ?? {
+    stakeholderClarity: "",
+    decisionMakerAccess: "",
+    projectBackground: "",
+  },
+  default: () => ({
+    stakeholderClarity: "",
+    decisionMakerAccess: "",
+    projectBackground: "",
+  }),
+}),
+readinessBreakdown: Annotation<{
+  stakeholderClarity: number;
+  decisionMakerAccess: number;
+  projectBackground: number;
+}>({
+  reducer: (x, y) => y ?? x ?? {
+    stakeholderClarity: 0,
+    decisionMakerAccess: 0,
+    projectBackground: 0,
+  },
+  default: () => ({
+    stakeholderClarity: 0,
+    decisionMakerAccess: 0,
+    projectBackground: 0,
+  }),
+}),
+
 };
+
+

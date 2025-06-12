@@ -5,6 +5,8 @@ import { generateSummary } from "../agents/summaryAgent.js";
 import { streamAnswerWithContext } from "../agents/ragAgent.js";
 import { scrapeWeb } from "../agents/webScraperAgent.js";
 import { evaluateRedFlags } from "../agents/redflagAgent.js";
+import { evaluateCustomerReadiness } from "../agents/evaluateCustomerReadiness.js"; 
+
 
 // ✅ Initial RAG node
 const streamInitialAnswer = async (state: any, options: any = {}) => {
@@ -26,31 +28,33 @@ const decideNextStep = (state: any) => {
   if (!state.hasScraped) return { next: "scrapeWeb" };
   return { next: END };
 };
-
 const graph = new StateGraph(graphStateDef)
+  .addNode("evaluateRedFlags", evaluateRedFlags)
   .addNode("evaluateStrategy", evaluateStrategy)
+  .addNode("evaluateCustomerReadiness", evaluateCustomerReadiness) // 👈 NEW
   .addNode("generateSummary", generateSummary)
   .addNode("streamAnswerWithContext", streamInitialAnswer)
   .addNode("decideNextStep", decideNextStep)
   .addNode("scrapeWeb", scrapeWeb)
-  .addNode("evaluateRedFlags", evaluateRedFlags)
 
+  // START → Red Flag Agent
   .addEdge(START, "evaluateRedFlags")
-
-  // 🔄 Always go to strategy or summary after red flag check
   .addConditionalEdges("evaluateRedFlags", (state: any) => {
-    const action = (state.action ?? "").toLowerCase();
-    if (action === "proceed") return "evaluateStrategy";
-    return "generateSummary";
+    if ((state.action ?? "").toLowerCase() === "do not proceed") return "generateSummary";
+    return "evaluateStrategy";
   })
 
-  .addEdge("evaluateStrategy", "generateSummary")
+  // Strategy → Customer Readiness → Summary
+  .addEdge("evaluateStrategy", "evaluateCustomerReadiness")
+  .addEdge("evaluateCustomerReadiness", "generateSummary")
+
+  // Summary → RAG streaming
   .addEdge("generateSummary", "streamAnswerWithContext")
 
+  // RAG logic
   .addEdge("streamAnswerWithContext", "decideNextStep")
   .addConditionalEdges("decideNextStep", (state: any) => {
-    if (state.isAnswerInDocument) return END;
-    if (!state.hasScraped && !state.isAnswerInDocument) return "scrapeWeb";
+    if (!state.isAnswerInDocument && !state.hasScraped) return "scrapeWeb";
     return END;
   })
   .addEdge("scrapeWeb", "streamAnswerWithContext")
