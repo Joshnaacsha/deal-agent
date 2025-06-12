@@ -41,12 +41,14 @@ export const graphStateDef = {
     deliveryCapability: number;
     businessJustification: number;
   }>({
-    reducer: (x, y) => y ?? x ?? {
-      marketAlignment: 0,
-      winProbability: 0,
-      deliveryCapability: 0,
-      businessJustification: 0,
-    },
+    reducer: (x, y) =>
+      y ??
+      x ?? {
+        marketAlignment: 0,
+        winProbability: 0,
+        deliveryCapability: 0,
+        businessJustification: 0,
+      },
     default: () => ({
       marketAlignment: 0,
       winProbability: 0,
@@ -60,12 +62,14 @@ export const graphStateDef = {
     deliveryCapability: string;
     businessJustification: string;
   }>({
-    reducer: (x, y) => y ?? x ?? {
-      marketAlignment: "",
-      winProbability: "",
-      deliveryCapability: "",
-      businessJustification: "",
-    },
+    reducer: (x, y) =>
+      y ??
+      x ?? {
+        marketAlignment: "",
+        winProbability: "",
+        deliveryCapability: "",
+        businessJustification: "",
+      },
     default: () => ({
       marketAlignment: "",
       winProbability: "",
@@ -77,9 +81,42 @@ export const graphStateDef = {
     reducer: (x, y) => y ?? x ?? false,
     default: () => false,
   }),
-  // ✅ ADD THIS:
   hasScraped: Annotation<boolean>({
     reducer: (x, y) => y ?? x ?? false,
     default: () => false,
+  }),
+
+  // Red Flag Agent
+  redFlags: Annotation<{
+    vendorMinimumOnly: "yes" | "no" | "unknown";
+    biasedScope: "yes" | "no" | "unknown";
+    unrealisticTimelineOrBudget: "yes" | "no" | "unknown";
+    noStakeholderAccess: "yes" | "no" | "unknown";
+    missingEvaluationCriteria: "yes" | "no" | "unknown";
+  }>({
+    reducer: (x, y) => y ?? x ?? {
+      vendorMinimumOnly: "unknown",
+      biasedScope: "unknown",
+      unrealisticTimelineOrBudget: "unknown",
+      noStakeholderAccess: "unknown",
+      missingEvaluationCriteria: "unknown",
+    },
+    default: () => ({
+      vendorMinimumOnly: "unknown",
+      biasedScope: "unknown",
+      unrealisticTimelineOrBudget: "unknown",
+      noStakeholderAccess: "unknown",
+      missingEvaluationCriteria: "unknown",
+    }),
+  }),
+
+  totalFlags: Annotation<number>({
+    reducer: (x, y) => y ?? x ?? 0,
+    default: () => 0,
+  }),
+
+  action: Annotation<"proceed" | "do not proceed">({
+    reducer: (x, y) => y ?? x ?? "proceed",
+    default: () => "proceed",
   }),
 };
