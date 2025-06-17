@@ -29,8 +29,9 @@ export async function streamAnswerWithContext(
   const historyText = chatHistory
     .map(m => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
     .join("\n");
+  
+  const rfpText = state.rawText; 
 
-  const rfpText = state.rawText;
 
   const prompt = `
 You are a helpful AI assistant answering questions about an RFP evaluation.
@@ -91,6 +92,7 @@ Follow-up questions:
 1. ...
 2. ...
 3. ...
+
 `;
 
   const streamResp = await model.generateContentStream({
@@ -117,7 +119,7 @@ Follow-up questions:
 
     if (emitPoint !== -1) {
       const toEmit = buffer.slice(0, emitPoint + 1);
-      onToken(toEmit); // Emit plain string, not JSON
+      onToken(toEmit);
       buffer = buffer.slice(emitPoint + 1);
     }
   }
@@ -128,8 +130,7 @@ Follow-up questions:
     fullOutput += buffer.trim();
   }
 
-  // Signal stream end
-  onToken("\n[DONE]");
+  onToken("[DONE]");
 
   const lowerOutput = fullOutput.toLowerCase();
   const isGeneric =
