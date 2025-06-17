@@ -8,6 +8,8 @@ export default function App() {
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [rawText, setRawText] = useState<string | null>(null);
+
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -32,6 +34,7 @@ export default function App() {
       
       setUploadedFile(file.name);
       const result = await res.json();
+setRawText(result.rawText); // ✅ Save it for /rag-stream
 
 setMessages([
   {
@@ -43,6 +46,7 @@ setMessages([
     content: result.summary || "No summary found."
   }
 ]);
+
 
     } catch (error) {
       setMessages([{
@@ -68,10 +72,18 @@ setMessages([
     let aiMessage = "";
     let didWebScrape = false;  // ← track whether we’ve fallen back once
 const res = await fetch("http://localhost:3001/rag-stream", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question: currentQuestion, chatHistory: currentHistory }),
-    });
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+  question: currentQuestion,
+    chatHistory: [],
+    rawText
+
+  })
+});
+
 
     const reader = res.body?.getReader();
     const decoder = new TextDecoder("utf-8");
@@ -94,7 +106,27 @@ const res = await fetch("http://localhost:3001/rag-stream", {
         // Ignore the [DONE] marker and wait for stream end
         continue;
       } 
-        aiMessage += token;
+        try {
+  const parsed = JSON.parse(token);
+
+  if (parsed.token) {
+    aiMessage += parsed.token;
+    setMessages(prev => {
+      const newMessages = [...prev];
+      newMessages[newMessages.length - 1] = { role: "ai", content: aiMessage };
+      return newMessages;
+    });
+  }
+
+  if (parsed.final && parsed.followups) {
+    // Optional: handle follow-up suggestions
+    console.log("Follow-up suggestions:", parsed.followups);
+  }
+
+} catch (e) {
+  console.warn("Failed to parse SSE chunk:", token);
+}
+
 
         // Update the last AI message with streaming content
         setMessages(prev => {

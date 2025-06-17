@@ -1,0 +1,60 @@
+{
+  "name": "deal-agent",
+  "version": "1.0.0",
+  "main": "./lib/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "ts-node ./dist/server/api.ts",
+    "start": "node ./dist/server/api.js",
+    "build": "tsc",
+    "lint": "tslint -c tslint.json src/**/*.ts",
+    "prepublish": "npm run build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@langchain/community": "^0.3.44",
+    "@langchain/core": "^0.3.57",
+    "@langchain/langgraph": "^0.3.0",
+    "@langchain/ollama": "^0.2.0",
+    "@supabase/supabase-js": "^2.49.8",
+    "axios": "^1.9.0",
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "fs-extra": "^11.3.0",
+    "langchain": "^0.3.27",
+    "lucide-react": "^0.511.0",
+    "multer": "^2.0.0",
+    "pdf-parse": "^1.1.1",
+    "ts-node": "^10.9.2",
+    "tslint": "^5.20.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.18",
+    "@types/express": "^5.0.2",
+    "@types/multer": "^1.4.12",
+    "@types/react": "^19.1.8",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.4",
+    "tailwindcss": "^4.1.8",
+    "typescript": "^5.8.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Joshnaacsha/deal-agent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Joshnaacsha/deal-agent/issues"
+  },
+  "homepage": "https://github.com/Joshnaacsha/deal-agent#readme",
+  "description": "",
+  "files": [
+    "./bin/*",
+    "./lib/*"
+  ],
+  "typings": "./lib/index.d.ts"
+}
