@@ -561,7 +561,7 @@ export default function App() {
               onMouseLeave={(e) => !uploading && ((e.target as HTMLElement).style.transform = 'translateY(0)')}
             >
               {uploading ? <Loader size={16} className="animate-spin" /> : <Upload size={16} />}
-              <span>{uploading ? 'Analysing...' : 'Upload PDF'}</span>
+              <span>{uploading ? 'Analysing...' : 'Upload RFx'}</span>
             </button>
             <input
               ref={fileInputRef}
@@ -721,7 +721,7 @@ export default function App() {
               </div>
               {!uploadedFile && (
                 <p style={styles.helperText}>
-                  Please upload a PDF document first to start asking questions
+                  Please upload a RFx document first to start asking questions
                 </p>
               )}
             </div>

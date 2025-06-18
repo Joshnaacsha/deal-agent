@@ -31,6 +31,8 @@ export async function streamAnswerWithContext(
     .join("\n");
   
   const rfpText = state.rawText; 
+  const summary = state.summary || ""; 
+
 
 
   const prompt = `
@@ -72,6 +74,10 @@ Readiness Explanation:
 - Project Background: ${state.readinessExplanation?.projectBackground}
 
 ---
+
+📝 SUMMARY VERDICT:
+${summary || "None"}
+ 
 RFP TEXT:
 ${rfpText}
 
@@ -82,11 +88,13 @@ USER QUESTION:
 ${question}
 
 Instructions:
-Use agent insights and context first to answer questions about red flags, strategic score, or readiness.
-Fallback to document if the question isn’t about agent results.
-End with 3 follow-up questions the user could ask next. Only suggest questions that can be answered from the RFP text. Questions must be based on the current context above. Ask questiosn for which the answers are present withing the context provide. 
-If the context does not provide enough information to answer the question, do not suggest it.
-If nothing is relevant, respond exactly with: "Not found in available context."
+Use agent insights first when answering questions about red flags, strategic fit, or readiness.
+If the user asks about the verdict, recommendation, or justification — refer to the summary section above.
+If that is not sufficient, fallback to document or RFP text to explain.
+If the context is truly insufficient, respond exactly with: "Not found in available context."
+
+Always end with 3 follow-up questions the user could ask next. Only suggest questions that can be answered from the RFP text. Questions must be based on the current context above. Ask questiosn for which the answers are present withing the context provide. 
+
 
 Format them like:
 Follow-up questions:
