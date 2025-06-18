@@ -83,8 +83,9 @@ ${question}
 
 Instructions:
 Use agent insights and context first to answer questions about red flags, strategic score, or readiness.
-Fallback to document and web context only if the question isn’t about agent results.
-End with 3 follow-up questions the user could ask next. Only suggest questions that can be answered from the RFP text. Questions must be based on the current context above.
+Fallback to document if the question isn’t about agent results.
+End with 3 follow-up questions the user could ask next. Only suggest questions that can be answered from the RFP text. Questions must be based on the current context above. Ask questiosn for which the answers are present withing the context provide. 
+If the context does not provide enough information to answer the question, do not suggest it.
 If nothing is relevant, respond exactly with: "Not found in available context."
 
 Format them like:

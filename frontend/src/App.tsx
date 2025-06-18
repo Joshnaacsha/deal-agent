@@ -19,11 +19,15 @@ export default function App() {
     scrollToBottom();
   }, [messages]);
 
-  // Function to format markdown content to HTML - excluding follow-up questions
+  // Fixed function to format markdown content to HTML - more precise follow-up removal
   const formatMarkdown = (content: string) => {
-    // Remove follow-up questions section from content
-    let cleanContent = content.replace(/\n\n.*Follow-up questions:.*$/s, '');
-    cleanContent = cleanContent.replace(/\n.*Suggested follow-up questions:.*$/s, '');
+    // More precise removal of follow-up questions section
+    // Only remove if it's at the very end and clearly a follow-up section
+    let cleanContent = content;
+    
+    // Remove follow-up sections that appear at the end of the content
+    cleanContent = cleanContent.replace(/\n\n(Suggested )?[Ff]ollow-up [Qq]uestions?:\s*\n[\s\S]*$/m, '');
+    cleanContent = cleanContent.replace(/\n\n(Here are some )?[Ff]ollow-up [Qq]uestions?[\s\S]*$/m, '');
     
     // Basic markdown formatting
     let formatted = cleanContent
@@ -60,7 +64,7 @@ export default function App() {
     // Add uploading message
     setMessages([{
       role: "ai",
-      content: `📤 Analysing"${file.name}"... Please wait.`
+      content: `📤 Analysing "${file.name}"... Please wait.`
     }]);
 
     const formData = new FormData();
@@ -111,6 +115,7 @@ export default function App() {
     try {
       let aiMessage = "";
       let followups: string[] = [];
+      let buffer = ""; // Buffer for incomplete JSON chunks
       
       const res = await fetch("http://localhost:3001/rag-stream", {
         method: "POST",
@@ -124,59 +129,100 @@ export default function App() {
         })
       });
 
-      const reader = res.body?.getReader();
+      if (!res.body) {
+        throw new Error("Response body is null");
+      }
+
+      const reader = res.body.getReader();
       const decoder = new TextDecoder("utf-8");
 
       // Add an empty AI message that we'll update
       setMessages(prev => [...prev, { role: "ai", content: "" }]);
 
       while (true) {
-        const { value, done } = await reader!.read();
+        const { value, done } = await reader.read();
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk
-          .split("\n")
-          .filter(line => line.trim().startsWith("data:"));
+        buffer += chunk;
+
+        // Process complete lines from buffer
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ""; // Keep incomplete line in buffer
 
         for (const line of lines) {
-          const token = line.replace(/^data:\s*/, "");
-          if (token === "[DONE]") {
+          if (!line.trim() || !line.startsWith('data:')) continue;
+          
+          const jsonStr = line.replace(/^data:\s*/, "").trim();
+          if (jsonStr === "[DONE]") {
             continue;
-          } 
+          }
           
           try {
-            const parsed = JSON.parse(token);
+            const parsed = JSON.parse(jsonStr);
 
             if (parsed.token) {
               aiMessage += parsed.token;
+              // Update the message immediately - but don't format during streaming
               setMessages(prev => {
                 const newMessages = [...prev];
-                newMessages[newMessages.length - 1] = { role: "ai", content: aiMessage };
+                if (newMessages.length > 0) {
+                  newMessages[newMessages.length - 1] = { 
+                    role: "ai", 
+                    content: aiMessage 
+                  };
+                }
                 return newMessages;
               });
             }
 
             if (parsed.final && parsed.followups) {
               followups = parsed.followups;
-              // Update the final message with follow-ups but keep the content clean
-              setMessages(prev => {
-                const newMessages = [...prev];
-                newMessages[newMessages.length - 1] = { 
-                  role: "ai", 
-                  content: aiMessage, // Only the main response content
-                  followups: followups
-                };
-                return newMessages;
-              });
             }
           } catch (e) {
-            // Skip invalid JSON chunks
+            // Log the error for debugging but continue processing
+            console.warn("Failed to parse JSON chunk:", jsonStr, e);
             continue;
           }
         }
       }
+
+      // Process any remaining data in buffer
+      if (buffer.trim()) {
+        const lines = buffer.split('\n').filter(line => line.trim() && line.startsWith('data:'));
+        for (const line of lines) {
+          const jsonStr = line.replace(/^data:\s*/, "").trim();
+          if (jsonStr === "[DONE]") continue;
+          
+          try {
+            const parsed = JSON.parse(jsonStr);
+            if (parsed.token) {
+              aiMessage += parsed.token;
+            }
+            if (parsed.final && parsed.followups) {
+              followups = parsed.followups;
+            }
+          } catch (e) {
+            console.warn("Failed to parse remaining JSON:", jsonStr, e);
+          }
+        }
+      }
+
+      // Final update with follow-ups
+      setMessages(prev => {
+        const newMessages = [...prev];
+        if (newMessages.length > 0) {
+          newMessages[newMessages.length - 1] = { 
+            role: "ai", 
+            content: aiMessage,
+            followups: followups.length > 0 ? followups : undefined
+          };
+        }
+        return newMessages;
+      });
+
     } catch (error) {
+      console.error("Error in handleAsk:", error);
       setMessages(prev => [
         ...prev,
         { role: "ai", content: "❌ Sorry, I encountered an error. Please try again." },
@@ -539,7 +585,7 @@ export default function App() {
                   <Bot size={80} style={{ color: '#d1d5db', margin: '0 auto 20px' }} />
                   <h3 style={styles.welcomeTitle}>Welcome to Deal Agent!</h3>
                   <p style={styles.welcomeText}>
-                    Upload a PDF document and start asking questions about it. I'll help you understand RFx documents with intelligent analysis and insights.
+                    I'll help you understand RFx documents with intelligent analysis and insights.
                   </p>
                 </div>
               )}

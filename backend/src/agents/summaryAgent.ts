@@ -56,14 +56,15 @@ Recommendation:
 - Proceed: ❌ Not advised.
 
 ---
-At the end of your response, suggest 3 follow-up questions the user could ask next.
-
+---
+📨 Follow-up Questions to Ask the Client:
+(Generate 5 clarification questions that could help fill gaps in the RFP or derisk the engagements.)
     `.trim();
   } else {
     let verdict = "";
     const percent = parseFloat(percentage);
     if (percent >= 75) verdict = "✅ Proceed";
-    else if (percent >= 55) verdict = "⚠️ Proceed with caution";
+    else if (percent >= 65) verdict = "⚠️ Proceed with caution";
     else verdict = "❌ Do not proceed";
 
     input = `
@@ -103,8 +104,9 @@ Flags Triggered: ${
 - Mitigate: <List any risks and solutions>
 - Proceed: <Highlight strengths or alignment>
 
-At the end of your response, suggest 3 follow-up questions the user could ask next.
-
+---
+📨 Follow-up Questions to Ask the Client:
+(Generate 5 clarification questions that could help fill gaps in the RFP or derisk the engagement.)
     `.trim();
   }
 

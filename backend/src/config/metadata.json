@@ -1,7 +1,7 @@
 {
-  "coreIndustries": ["Healthcare", "Finance"],
-  "regions": ["US", "EU"],
-  "domains": ["AI", "Cybersecurity"],
-  "pastWins": ["RFP-001", "RFP-002"],
-  "resources": ["Cloud team", "AI engineers"]
+  "coreIndustries": ["Technology", "Healthcare", "Financial Services"],
+  "regions": ["North America", "Europe"],
+  "domains": ["Atlassian Solutions", "Agile Transformation", "Cloud & DevOps"],
+  "pastWins": ["Digital Transformation for Global Bank", "Scaled Agile Implementation for Healthcare Provider"],
+  "resources": ["Certified Atlassian Consultants", "Agile Coaches", "Cloud DevOps Engineers"]
 }
