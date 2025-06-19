@@ -351,7 +351,7 @@ export default function App() {
               <Bot size={24} style={{ color: 'white' }} />
             </div>
             <div style={styles.headerText}>
-              <h1 style={styles.title}>Deal Agent</h1>
+              <h1 style={styles.title}>Deal GPT</h1>
               <p style={styles.subtitle}>Your AI-powered document assistant</p>
             </div>
           </div>
