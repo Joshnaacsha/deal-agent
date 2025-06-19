@@ -19,7 +19,6 @@ export default function App() {
     scrollToBottom();
   }, [messages]);
 
-  // Fixed function to format markdown content to HTML - more precise follow-up removal
   const formatMarkdown = (content: string) => {
     // More precise removal of follow-up questions section
     // Only remove if it's at the very end and clearly a follow-up section
