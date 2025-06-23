@@ -70,7 +70,7 @@ export default function App() {
     formData.append("file", file);
 
     try {
-      const res = await fetch("https://deal-gpt.onrender.com", {
+      const res = await fetch("https://dealgpt.onrender.com", {
         method: "POST",
         body: formData,
       });
@@ -116,7 +116,7 @@ export default function App() {
       let followups: string[] = [];
       let buffer = ""; // Buffer for incomplete JSON chunks
       
-      const res = await fetch("https://deal-gpt.onrender.com/rag-stream", {
+      const res = await fetch("https://dealgpt.onrender.com/rag-stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
