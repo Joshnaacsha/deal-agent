@@ -1,12 +1,13 @@
 import { START, END, StateGraph } from "@langchain/langgraph";
 import { graphStateDef } from "./graphState.js";
 import { evaluateStrategy } from "../agents/strategyAgent.js";
+import { evaluateCompetitiveEdge } from "../agents/competitiveAgent.js";
+import { evaluateStrategicUpside } from "../agents/strategicUpsideAgent.js";
 import { generateSummary } from "../agents/summaryAgent.js";
 import { streamAnswerWithContext } from "../agents/ragAgent.js";
 import { scrapeWeb } from "../agents/webScraperAgent.js";
 import { evaluateRedFlags } from "../agents/redflagAgent.js";
-import { evaluateCustomerReadiness } from "../agents/evaluateCustomerReadiness.js"; 
-
+import { evaluateCustomerReadiness } from "../agents/evaluateCustomerReadiness.js";
 
 // ✅ Initial RAG node
 const streamInitialAnswer = async (state: any, options: any = {}) => {
@@ -28,9 +29,12 @@ const decideNextStep = (state: any) => {
   if (!state.hasScraped) return { next: "scrapeWeb" };
   return { next: END };
 };
+
 const graph = new StateGraph(graphStateDef)
   .addNode("evaluateRedFlags", evaluateRedFlags)
   .addNode("evaluateStrategy", evaluateStrategy)
+  .addNode("evaluateCompetitiveEdge", evaluateCompetitiveEdge)
+  .addNode("evaluateStrategicUpside", evaluateStrategicUpside)
   .addNode("evaluateCustomerReadiness", evaluateCustomerReadiness)
   .addNode("generateSummary", generateSummary)
   .addNode("streamAnswerWithContext", streamInitialAnswer)
@@ -44,8 +48,10 @@ const graph = new StateGraph(graphStateDef)
     return "evaluateStrategy";
   })
 
-  // Strategy → Customer Readiness → Summary
-  .addEdge("evaluateStrategy", "evaluateCustomerReadiness")
+  // Strategy → Competitive Edge → Strategic Upside → Customer Readiness
+  .addEdge("evaluateStrategy", "evaluateCompetitiveEdge")
+  .addEdge("evaluateCompetitiveEdge", "evaluateStrategicUpside")
+  .addEdge("evaluateStrategicUpside", "evaluateCustomerReadiness")
   .addEdge("evaluateCustomerReadiness", "generateSummary")
 
   // Summary → RAG streaming

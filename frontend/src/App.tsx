@@ -70,7 +70,7 @@ export default function App() {
     formData.append("file", file);
 
     try {
-      const res = await fetch("https://deal-agent-backend.onrender.com/upload", {
+      const res = await fetch("http://localhost:3001/upload", {
         method: "POST",
         body: formData,
       });
@@ -116,7 +116,7 @@ export default function App() {
       let followups: string[] = [];
       let buffer = ""; // Buffer for incomplete JSON chunks
       
-      const res = await fetch("https://deal-agent-backend.onrender.com/rag-stream", {
+      const res = await fetch("http://localhost:3001/rag-stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -312,21 +312,6 @@ export default function App() {
       fontWeight: '500',
       border: '1px solid #a7f3d0'
     },
-    uploadButton: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      background: uploading ? '#9ca3af' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      color: 'white',
-      border: 'none',
-      padding: '12px 20px',
-      borderRadius: '12px',
-      cursor: uploading ? 'not-allowed' : 'pointer',
-      fontSize: '14px',
-      fontWeight: '600',
-      transition: 'all 0.2s ease',
-      boxShadow: uploading ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)'
-    },
     chatContainer: {
       flex: 1,
       overflow: 'hidden',
@@ -485,6 +470,23 @@ export default function App() {
       alignItems: 'flex-end',
       gap: '16px'
     },
+    uploadButton: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: uploading ? '#9ca3af' : 'rgba(255, 255, 255, 0.9)',
+      color: uploading ? 'white' : '#667eea',
+      border: '1px solid #e5e7eb',
+      padding: '14px',
+      borderRadius: '14px',
+      cursor: uploading ? 'not-allowed' : 'pointer',
+      fontSize: '14px',
+      fontWeight: '600',
+      transition: 'all 0.2s ease',
+      flexShrink: 0,
+      backdropFilter: 'blur(8px)',
+      boxShadow: uploading ? 'none' : '0 2px 8px rgba(102, 126, 234, 0.1)'
+    },
     textarea: {
       flex: 1,
       padding: '16px 20px',
@@ -538,7 +540,7 @@ export default function App() {
               <Bot size={24} style={{ color: 'white' }} />
             </div>
             <div style={styles.headerText}>
-              <h1 style={styles.title}>Deal Agent</h1>
+              <h1 style={styles.title}>Deal GPT</h1>
               <p style={styles.subtitle}>Your AI-powered RFx assistant</p>
             </div>
           </div>
@@ -547,29 +549,11 @@ export default function App() {
             {uploadedFile && (
               <div style={styles.fileIndicator}>
                 <FileText size={16} />
-                <span style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {uploadedFile}
                 </span>
               </div>
             )}
-            <button
-              style={styles.uploadButton}
-              onClick={() => !uploading && fileInputRef.current?.click()}
-              disabled={uploading}
-              onMouseEnter={(e) => !uploading && ((e.target as HTMLElement).style.transform = 'translateY(-1px)')}
-              onMouseLeave={(e) => !uploading && ((e.target as HTMLElement).style.transform = 'translateY(0)')}
-            >
-              {uploading ? <Loader size={16} className="animate-spin" /> : <Upload size={16} />}
-              <span>{uploading ? 'Analysing...' : 'Upload RFx'}</span>
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf"
-              onChange={handleUpload}
-              style={{ display: 'none' }}
-              disabled={uploading}
-            />
           </div>
         </div>
       </div>
@@ -582,9 +566,10 @@ export default function App() {
               {messages.length === 0 && (
                 <div style={styles.welcomeScreen}>
                   <Bot size={80} style={{ color: '#d1d5db', margin: '0 auto 20px' }} />
-                  <h3 style={styles.welcomeTitle}>Welcome to Deal Agent!</h3>
+                  <h3 style={styles.welcomeTitle}>Welcome to Deal GPT!</h3>
                   <p style={styles.welcomeText}>
-                    I'll help you understand RFx documents with intelligent analysis and insights.
+                    I'll help you understand RFx documents with intelligent analysis and insights. 
+                    Start by uploading a document below.
                   </p>
                 </div>
               )}
@@ -676,13 +661,39 @@ export default function App() {
             {/* Input Area */}
             <div style={styles.inputArea}>
               <div style={styles.inputContainer}>
+                <button
+                  style={styles.uploadButton}
+                  onClick={() => !uploading && fileInputRef.current?.click()}
+                  disabled={uploading}
+                  title={uploading ? 'Analysing document...' : 'Upload RFx document'}
+                  onMouseEnter={(e) => {
+                    if (!uploading) {
+                      (e.target as HTMLElement).style.backgroundColor = 'rgba(102, 126, 234, 0.1)';
+                      (e.target as HTMLElement).style.borderColor = '#667eea';
+                      (e.target as HTMLElement).style.transform = 'translateY(-1px)';
+                      (e.target as HTMLElement).style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.2)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!uploading) {
+                      (e.target as HTMLElement).style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+                      (e.target as HTMLElement).style.borderColor = '#e5e7eb';
+                      (e.target as HTMLElement).style.transform = 'translateY(0)';
+                      (e.target as HTMLElement).style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.1)';
+                    }
+                  }}
+                >
+                  {uploading ? <Loader size={18} className="animate-spin" /> : <Upload size={18} />}
+                </button>
+
                 <textarea
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Ask a question about your document..."
+                  placeholder={uploadedFile ? "Ask a question about your document..." : "Upload a document first to start asking questions..."}
                   style={styles.textarea}
                   rows={1}
+                  disabled={!uploadedFile}
                   onInput={(e) => {
                     const target = e.target as HTMLTextAreaElement;
                     target.style.height = 'auto';
@@ -697,6 +708,7 @@ export default function App() {
                     (e.target.style.boxShadow = 'none');
                   }}
                 />
+
                 <button
                   onClick={() => handleAsk()}
                   disabled={loading || question.trim() === "" || !uploadedFile}
@@ -717,12 +729,16 @@ export default function App() {
                 >
                   <Send size={20} />
                 </button>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleUpload}
+                  style={{ display: 'none' }}
+                  disabled={uploading}
+                />
               </div>
-              {!uploadedFile && (
-                <p style={styles.helperText}>
-                  Please upload a RFx document first to start asking questions
-                </p>
-              )}
             </div>
           </div>
         </div>

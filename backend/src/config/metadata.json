@@ -1,7 +1,29 @@
 {
+  "company": "Cprime",
   "coreIndustries": ["Technology", "Healthcare", "Financial Services"],
   "regions": ["North America", "Europe"],
   "domains": ["Atlassian Solutions", "Agile Transformation", "Cloud & DevOps"],
-  "pastWins": ["Digital Transformation for Global Bank", "Scaled Agile Implementation for Healthcare Provider"],
-  "resources": ["Certified Atlassian Consultants", "Agile Coaches", "Cloud DevOps Engineers"]
+  "pastWins": [
+    "Digital Transformation for Global Bank",
+    "Scaled Agile Implementation for Healthcare Provider"
+  ],
+  "resources": [
+    "Certified Atlassian Consultants",
+    "Agile Coaches",
+    "Cloud DevOps Engineers"
+  ],
+  "differentiators": [
+    "Deep expertise in Atlassian tools and enterprise scaling",
+    "Proven frameworks for Agile at Scale",
+    "Integrated cloud-native DevOps delivery",
+    "End-to-end digital transformation capabilities"
+  ],
+  "clientRelationships": {
+    "Global Bank": "Ongoing multi-year transformation engagement",
+    "Healthcare Provider": "Strategic Agile advisory partner"
+  },
+  "brandValueInitiatives": [
+    "Thought leadership in Agile and DevOps communities",
+    "Recognized Atlassian Platinum Solution Partner"
+  ]
 }

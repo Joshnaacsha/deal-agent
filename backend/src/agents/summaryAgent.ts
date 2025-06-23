@@ -8,36 +8,52 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 export async function generateSummary(state: any) {
   const {
     strategicScore,
+    competitiveScore,
+    strategicUpsideScore,
+    readinessScore,
     explanation,
     redFlags,
     totalFlags,
     action,
-    readinessScore,
     readinessExplanation,
   } = state;
 
-  const combinedScore = strategicScore + readinessScore;
-  const maxScore = 2.75;
+  const maxScore = 5.0;
+  const combinedScore = Math.min(
+    (strategicScore || 0) +
+      (competitiveScore || 0) +
+      (strategicUpsideScore || 0) +
+      (readinessScore || 0),
+    maxScore
+  );
   const percentage = ((combinedScore / maxScore) * 100).toFixed(1);
+
+  const flagDescriptions = {
+    vendorMinimumOnly:
+      "Only minimum vendor requirements provided, which may indicate minimal effort or checkbox compliance.",
+    biasedScope:
+      "The scope seems written for a specific vendor, possibly signaling a biased selection process.",
+    unrealisticTimelineOrBudget:
+      "The project timeline or budget appears unrealistic and could compromise delivery quality.",
+    noStakeholderAccess:
+      "No access to key stakeholders is mentioned, which limits discovery and solutioning.",
+    missingEvaluationCriteria:
+      "The evaluation criteria are vague or missing, making the selection process unpredictable.",
+  };
 
   let input = "";
 
   if (action === "do not proceed") {
-    const flagDescriptions = {
-      vendorMinimumOnly: "Only minimum vendor requirements provided",
-      biasedScope: "Scope appears biased toward a specific vendor",
-      unrealisticTimelineOrBudget: "Timeline or budget seems unrealistic",
-      noStakeholderAccess: "No access to key stakeholders provided",
-      missingEvaluationCriteria: "Missing or vague evaluation criteria",
-    };
-
     const triggeredFlags = Object.entries(redFlags)
       .filter(([_, value]) => value === "yes")
-      .map(([key]) => `- ${flagDescriptions[key as keyof typeof flagDescriptions]}`)
+      .map(
+        ([key]) =>
+          `- ${flagDescriptions[key as keyof typeof flagDescriptions]}`
+      )
       .join("\n");
 
     input = `
-You are a risk analyst.
+You are a risk analyst. Avoid internal framework terms and instead use clear, human-friendly language appropriate for client-facing summaries.
 
 Summarize why this RFP should not be pursued.
 
@@ -56,7 +72,6 @@ Recommendation:
 - Proceed: ❌ Not advised.
 
 ---
----
 📨 Follow-up Questions to Ask the Client:
 (Generate 5 clarification questions that could help fill gaps in the RFP or derisk the engagements.)
     `.trim();
@@ -67,31 +82,42 @@ Recommendation:
     else if (percent >= 65) verdict = "⚠️ Proceed with caution";
     else verdict = "❌ Do not proceed";
 
-    input = `
-You are a strategic pre-sales analyst.
+    const triggeredFlags = Object.entries(redFlags)
+      .filter(([_, value]) => value === "yes")
+      .map(
+        ([key]) =>
+          `• ${flagDescriptions[key as keyof typeof flagDescriptions]}`
+      )
+      .join("\n");
 
-Generate a pursuit recommendation using strategic evaluation, customer readiness, and red flags.
+    input = `
+You are a strategic pre-sales analyst. Avoid internal framework terms and instead use clear, human-friendly language appropriate for client-facing summaries.
+
+Generate a pursuit recommendation using all evaluation dimensions and red flag analysis.
 
 ---
 🏁 Verdict: ${verdict}
-📈 Overall Score: ${percentage}% (out of 100%)
+📈 Overall Score: ${percentage}% (based on a max of 5.0)
 
 🔴 Red Flags:
 Total Flags: ${totalFlags}
-Flags Triggered: ${
-      Object.entries(redFlags)
-        .filter(([_, v]) => v === "yes").length > 0
-        ? Object.entries(redFlags)
-            .filter(([_, v]) => v === "yes")
-            .map(([k]) => `• ${k}`).join(", ")
-        : "None"
-    }
+Flags Triggered:
+${triggeredFlags || "None"}
 
 📊 Strategic Evaluation:
 - Market Alignment: ${explanation.marketAlignment}
 - Win Probability: ${explanation.winProbability}
 - Delivery Capability: ${explanation.deliveryCapability}
 - Business Justification: ${explanation.businessJustification}
+
+🧩 Competitive Edge:
+- Relevant Experience: ${explanation.relevantExperience}
+- Differentiators: ${explanation.differentiators}
+- Client Relationship: ${explanation.clientRelationship}
+
+📘 Strategic Upside:
+- Long-Term Potential: ${explanation.longTermPotential}
+- Brand Value: ${explanation.brandValue}
 
 📘 Customer Readiness:
 - Stakeholder Clarity: ${readinessExplanation.stakeholderClarity}
